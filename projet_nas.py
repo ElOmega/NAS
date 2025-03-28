@@ -1,5 +1,12 @@
 import json
 
+def ipv4(adresse_ip,number):
+    adresse_ip = adresse_ip.split('/')
+    adresse_ip = adresse_ip[0]
+    adresse_ip = adresse_ip + number
+    return adresse_ip
+
+
 def read_json(file_path):
     try:
         with open(file_path, 'r') as file:
@@ -13,95 +20,78 @@ def read_json(file_path):
 
 def create_cfg_config(base_server_config, router, intent, AS):
     with open(f'i{router[1:]}_startup-config.cfg', 'w') as file:
+        number=router[1:]
         for sentence in base_server_config:
             file.write(sentence + '\n!\n')
             protocol=intent[AS]['protocol']
             ebgp_neighbor=False
-
             if sentence == "service timestamps log datetime msec":
                 file.write(f"hostname {router}\n")
-            
-
-            
             elif sentence == "ip tcp synwait-time 5":
-                # Interface Loopback
-                loopback_addr = intent[AS]['router'][router].get("Loopback0", "")
-                if loopback_addr:
-                    file.write(f"interface Loopback0\n no ip address\n ipv6 address {loopback_addr}\n ipv6 enable\n")
-                    if protocol=='RIP':
-                            rip_process = f"RIP_{intent[AS]['AS_number']}"
-                            file.write(f" ipv6 rip {rip_process} enable\n")
-
-                    elif protocol=='OSPF':
-                        file.write(" ipv6 ospf 4 area 2\n")
-                
+                #mise en place de l'interface loopback
+                loopback_addr = intent[AS]['address_loopback']
+                loopback_addr = loopback_addr[0].split('/')
+                loopback = loopback_addr[0]+"."+number
+                file.write(f"interface Loopback0\n no ip address\n ipv6 address {loopback}\n ipv6 enable\n")
+                #activation de OSPF
+                file.write(" ipv6 ospf 4 area 2\n")
                 # Configuration des interfaces
                 for interface, ip in intent[AS]['router'][router].items():
                     if interface not in ["Loopback0", "ebgp_neighbors"]:
                         file.write(f"interface {interface}\n no ip address\n negotiation auto\n ipv6 address {ip}\n ipv6 enable\n")
-                        
-                        if protocol=='RIP':
-                            rip_process = f"RIP_{intent[AS]['AS_number']}"
-                            file.write(f" ipv6 rip {rip_process} enable\n!\n")
-
-                        elif protocol=='OSPF':
-                            file.write(" ipv6 ospf 4 area 2\n!\n")
+                file.write(" ipv6 ospf 4 area 2\n!\n")
 
 
 
 
-                #CONFIG BGP
-                as_number = intent[AS]["AS_number"]
-                router_id = f"{router[1:]}.{router[1:]}.{router[1:]}.{router[1:]}"
-                file.write(f"router bgp {as_number}\n bgp router-id {router_id}\n bgp log-neighbor-changes\n no bgp default ipv4-unicast\n")
-                neighbors = []
+                # #CONFIG BGP
+                # as_number = intent[AS]["AS_number"]
+                # router_id = f"{router[1:]}.{router[1:]}.{router[1:]}.{router[1:]}"
+                # file.write(f"router bgp {as_number}\n bgp router-id {router_id}\n bgp log-neighbor-changes\n no bgp default ipv4-unicast\n")
+                # neighbors = []
                 
                 
-                # Configuration iBGP avec tous les routeurs du même AS
-                for peer in intent[AS]['router']:
-                    if peer != router:
-                        peer_loopback = intent[AS]['router'][peer].get("Loopback0", "")
-                        if peer_loopback:
-                            peer_ip = peer_loopback.split('/')[0]
-                            file.write(f" neighbor {peer_ip} remote-as {as_number}\n")
-                            file.write(f" neighbor {peer_ip} update-source Loopback0\n")
-                            file.write(f" neighbor {peer_ip} next-hop-self\n")
+                # # Configuration iBGP avec tous les routeurs du même AS
+                # for peer in intent[AS]['router']:
+                #     if peer != router:
+                #         peer_loopback = intent[AS]['router'][peer].get("Loopback0", "")
+                #         if peer_loopback:
+                #             peer_ip = peer_loopback.split('/')[0]
+                #             file.write(f" neighbor {peer_ip} remote-as {as_number}\n")
+                #             file.write(f" neighbor {peer_ip} update-source Loopback0\n")
+                #             file.write(f" neighbor {peer_ip} next-hop-self\n")
 
-                            neighbors.append(peer_ip)
+                #             neighbors.append(peer_ip)
                 
-                # Configuration eBGP avec les routeurs des AS voisins
-                ebgp_neighbors = intent[AS]['router'][router].get("ebgp_neighbors", {})
-                for neighbor, neighbor_ip in ebgp_neighbors.items():
-                    neighbor_as = None
-                    for other_as in intent:
-                        if other_as != AS and neighbor in intent[other_as]['router']:
-                            neighbor_as = intent[other_as]["AS_number"]
-                            break
-                    if neighbor_as:
-                        file.write(f" neighbor {neighbor_ip.split('/')[0]} remote-as {neighbor_as}\n")
-                        neighbors.append(neighbor_ip.split('/')[0])
-                        ebgp_neighbor=True
+                # # Configuration eBGP avec les routeurs des AS voisins
+                # ebgp_neighbors = intent[AS]['router'][router].get("ebgp_neighbors", {})
+                # for neighbor, neighbor_ip in ebgp_neighbors.items():
+                #     neighbor_as = None
+                #     for other_as in intent:
+                #         if other_as != AS and neighbor in intent[other_as]['router']:
+                #             neighbor_as = intent[other_as]["AS_number"]
+                #             break
+                #     if neighbor_as:
+                #         file.write(f" neighbor {neighbor_ip.split('/')[0]} remote-as {neighbor_as}\n")
+                #         neighbors.append(neighbor_ip.split('/')[0])
+                #         ebgp_neighbor=True
                 
 
                 file.write(" address-family ipv4\n")
                 file.write(" exit-address-family\n !\n")
                 file.write(" address-family ipv6\n")
-                if ebgp_neighbor :
-                    for network in intent[AS]['address']:
-                        file.write(f"  network {network}\n")
-                for neighbor in neighbors:
-                    file.write(f"  neighbor {neighbor} activate\n")
+                # if ebgp_neighbor :
+                #     for network in intent[AS]['address']:
+                #         file.write(f"  network {network}\n")
+                # for neighbor in neighbors:
+                #     file.write(f"  neighbor {neighbor} activate\n")
                 
                 file.write(" exit-address-family\n!\n")
 
-            #config ospf rip
+
             elif sentence == "no ip http secure-server":
-                if protocol=='RIP':
-                    rip_process = f"RIP_{intent[AS]['AS_number']}"
-                    file.write(f"ipv6 router rip {rip_process}\n redistribute connected\n!\n")
-                elif protocol=='OSPF':
-                    router_id=f"{router[1:]}.{router[1:]}.{router[1:]}.{router[1:]}"
-                    file.write(f"ipv6 router ospf 4\n router-id {router_id} \n!\n")
+                router_id=f"{router[1:]}.{router[1:]}.{router[1:]}.{router[1:]}"
+                file.write(f"ipv6 router ospf 4\n router-id {router_id} \n!\n")
 
 
 
@@ -147,6 +137,6 @@ if __name__ == "__main__":
         "end"
     ]
 
-    intent = read_json("router_test.json")
+    intent = read_json("router.json")
     if intent:
         main(intent, base_server_config)
