@@ -1,15 +1,52 @@
 
 {
+
   "AS_mid" : {
     "address" : ["192.168.1/30"],
     "address_loopback" : ["10.0.0/32"],
     "router" : {
-      "R1" : {"R2" : "GigabitEthernet 1/0","ebgp_neighbors": "R4"},
+      "R1" : {"R2" : "GigabitEthernet 1/0","R5" : "GigabitEthernet 2/0","R6" : "GigabitEthernet 3/0","ebgp_neighbors": "R4"},
       "R2" : {"R1" : "GigabitEthernet 1/0", "R3" : "GigabitEthernet 2/0"},
       "R3" : {"R2" : "GigabitEthernet 2/0", "R4" : "GigabitEthernet 1/0"},
-      "R4" : {"R3" : "GigabitEthernet 1/0","ebgp_neighbors": "R1"}
+      "R4" : {"R3" : "GigabitEthernet 1/0","R7":"GigabitEthernet 2/0","R8" : "GigabitEthernet 3/0","ebgp_neighbors": "R1"}
     },
     "protocol" : "OSPF",
     "AS_number" : 100
+  },
+  "AS_haut_gauche" : {
+    "address" : ["192.168.2/30"],
+    "router" : {
+      "R5" : {"R1" : "GigabitEthernet 1/0"}
+    },
+    "protocol" : "OSPF",
+    "AS_number" : 100
+
+  },
+  "AS_bas_gauche" : {
+    "address" : ["192.168.3/30"],
+    "router" : {
+      "R6" : {"R1" : "GigabitEthernet 1/0"}
+    },
+    "protocol" : "OSPF",
+    "AS_number" : 100
+
+  },
+  "AS_haut_droit" : {
+    "address" : ["192.168.4/30"],
+    "router" : {
+      "R7" : {"R4" : "GigabitEthernet 1/0"}
+    },
+    "protocol" : "OSPF",
+    "AS_number" : 100
+
+  },
+  "AS_bas_droit" : {
+    "address" : ["192.168.5/30"],
+    "router" : {
+      "R8" : {"R4" : "GigabitEthernet 1/0"}
+    },
+    "protocol" : "OSPF",
+    "AS_number" : 100
+
   }
 }
