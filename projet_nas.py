@@ -5,8 +5,13 @@ nombre_router_AS=0
 def ipv4(adresse_ip,number):
     adresse_ip = adresse_ip.split('/')
     adresse_ip = adresse_ip[0]
-    adresse_ip = adresse_ip +"."+ number +" "+"255.255.255.252"
+    adresse_ip = adresse_ip +"."+ number
     return adresse_ip
+
+def loopback(loopback_addr,number):
+    loopback_addr = loopback_addr[0].split('/')
+    loopback_addr = loopback_addr[0]+"."+str(number)
+    return loopback_addr
 
 
 def read_json(file_path):
@@ -27,43 +32,130 @@ def create_cfg_config(base_server_config, router, intent, AS):
         number=router[-1]
         for sentence in base_server_config:
             file.write(sentence + '\n!\n')
-            protocol=intent[AS]['protocol']
-            ebgp_neighbor=False
-            if sentence == "service timestamps log datetime msec":
+            if sentence == "boot-end-marker" and 'externe' in intent[AS]['router'][router]:
+                liste_router_voisin = list(intent[AS]['router'][router]['externe'])
+                for i in range(1,len(liste_router_voisin)+1):
+                    file.write(f"vrf definition Client_{i}\n")
+                    file.write(f" rd 100:{i}\n")
+                    file.write(f" route-target import 100:{i}000\n")
+                    file.write(f" route-target export 100:{i}000\n") 
+                    file.write(f"!\n")                           
+                    file.write(f" address-family ipv4\n")
+                    file.write(f" exit-address-family\n")
+                    file.write("!\n")
+
+            elif sentence == "service timestamps log datetime msec":
                 file.write(f"hostname {router}\n")
             elif sentence == "ip tcp synwait-time 5":
                 #mise en place de l'interface loopback
                 if "address_loopback" in intent[AS]:
-                    loopback_addr = intent[AS]['address_loopback']
-                    loopback_addr = loopback_addr[0].split('/')
-                    loopback = loopback_addr[0]+"."+str(number)
 
-                    file.write(f"interface Loopback0\n ip address {loopback} 255.255.255.255\n")
+                    file.write(f"interface Loopback0\n ip address {loopback(intent[AS]['address_loopback'],number)} 255.255.255.255\n")
                     file.write(" ip ospf 1 area 0\n")
                     file.write("!\n")
                 #IPV4
-                for router_other in intent[AS]['router'][router]:
-                    if router_other == "ebgp_neighbors":
+                for position in intent[AS]['router'][router]:
+                    if position == "ebgp_neighbors":
                         continue
-                    if len(intent[AS]['router'][router][router_other]) > 2 and intent[AS]['router'][router][router_other] != "GigabitEthernet 1/0":
-                        file.write(f"interface {intent[AS]['router'][router][router_other]}\n" 
-                               f" ip address {ipv4(intent[AS]['address'][0],str(nombre_router_AS))}\n")
-                    else:
-                        file.write(f"interface {intent[AS]['router'][router][router_other]}\n" 
-                               f" ip address {ipv4(intent[AS]['address'][0],str(nombre_router_AS))}\n")
-                    nombre_router_AS+=1
-                    print(nombre_router_AS)
+
+                    elif position == "interne":
+                        for router_other in intent[AS]['router'][router][position]: 
+                            file.write(f"interface {intent[AS]['router'][router][position][router_other]}\n" 
+                               f" ip address {ipv4(intent[AS]['address'][0],str(nombre_router_AS))}255.255.255.252\n")
+                            file.write(" ip ospf 1 area 0\n")
+                            file.write(" negotiation auto\n mpls ip\n")
+                            file.write("!\n")
+                            nombre_router_AS+=1
+                    elif position == "externe":
+                        for other_AS in intent:
+                            if other_AS == AS:
+                                continue
+                            for router_other in intent[other_AS]['router']:
+                                if router_other == router or router not in intent[other_AS]['router'][router_other]:
+                                    continue
+                                file.write(f"interface {intent[AS]['router'][router]['externe'][router_other]}\n")
+                                file.write(f" ip address {ipv4(intent[other_AS]['address'][0],str(2))} 255.255.255.252\n")
+                                file.write(" ip ospf 1 area 0\n")
+                                file.write(" negotiation auto\n mpls ip\n")
+                                file.write("!\n")
                     
-                    file.write(" ip ospf 1 area 0\n")
-                    file.write(" negotiation auto\n mpls ip\n")
-                    file.write("!\n")
+                    else : 
+
+                        for router_other in intent[AS]['router'][router]: 
+                            file.write(f"interface {intent[AS]['router'][router][router_other]}\n" 
+                               f" ip address {ipv4(intent[AS]['address'][0],str(nombre_router_AS))}\n")
+                            file.write(" ip ospf 1 area 0\n")
+                            file.write(" negotiation auto\n mpls ip\n")
+                            file.write("!\n")
+
+
+
 
 
                 #CONFIGURATION OSPF
-                file.write("router ospf 1\n")
-                file.write(f" router-id {str(number)+'.'+str(number)+'.'+str(number)+'.'+str(number)}\n")
-                file.write(" mpls ldp autoconfig\n")
-                file.write("!\n")
+                if AS == "AS_mid":
+                    file.write("router ospf 1\n")
+                    file.write(f" router-id {str(number)+'.'+str(number)+'.'+str(number)+'.'+str(number)}\n")
+                    file.write(" mpls ldp autoconfig\n")
+                    file.write("!\n")
+                
+                #Configuration de bgp
+                if "interne" in intent[AS]['router'][router] : 
+                    neighbor_AS = list(intent[AS]['router'])
+                    file.write(f"router bgp {intent[AS]['bgp']}\n")
+                    file.write(f" bgp log-neighbor-changes\n")
+                    for neighbor in intent[AS]['router'][router]['interne']:
+                        adresse_loopback = loopback(intent[AS]['address_loopback'],neighbor[-1])
+
+                        file.write(f" neighbor {adresse_loopback} remote-as {intent[AS]['bgp']}\n")
+                        file.write(f" neighbor {adresse_loopback} update-source Loopback0\n")
+                    file.write("!\n")
+                    file.write(f"address-family vpnv4\n")
+                    for neighbor in intent[AS]['router'][router]['interne']:
+                        adresse_loopback = loopback(intent[AS]['address_loopback'],neighbor[-1])
+                        file.write(f" neighbor {adresse_loopback} activate\n")
+                        file.write(f" neighbor {adresse_loopback} send-community both\n")
+                    file.write(f"exit-address-family\n")
+                    file.write("!\n")
+
+                    if 'externe' in intent[AS]['router'][router]:
+                        i=1
+                        for router_other in intent[AS]['router'][router]['externe']:
+                            for other_AS in intent:
+                                if other_AS == AS:
+                                    continue
+                                if router_other in intent[other_AS]['router']:
+                                    file.write(f"address-family ipv4 vrf Client_{i}\n")
+                                    file.write(f" neighbor {ipv4(intent[other_AS]['address'][0],str(1))} activate\n")
+                                    file.write(f" neighbor {ipv4(intent[other_AS]['address'][0],str(1))} send-community both\n")
+                                    i+=1
+                                    file.write("!\n")
+                
+                #Configuration de la redistribution
+                if AS !="AS_mid":
+                    file.write(f"router bgp {intent[AS]['bgp']}\n")
+                    file.write(" bgp log-neighbor-changes\n")
+                    file.write(" redistribute connected\n")
+                    for AS_other in intent :
+                            print(list(intent[AS]['router'][router])[0])
+                            print('et')
+                            print(list(intent[AS_other]['router']))
+                            print('------------')
+                            if list(intent[AS]['router'][router])[0] in list(intent[AS_other]['router']):
+                                print('ici')
+                                file.write(f" neighbor {ipv4(intent[AS]['address'][0],str(1))} remote-as {intent[AS_other]['bgp']}\n")
+                    file.write("!\n")
+
+
+
+
+                            
+
+
+
+
+
+
 
 
 def main(intent, base_server_config):
@@ -112,14 +204,4 @@ if __name__ == "__main__":
         main(intent, base_server_config)
 
 
-                        # # Configuration iBGP avec tous les routeurs du même AS
-                # for peer in intent[AS]['router']:
-                #     if peer != router:
-                #         peer_loopback = intent[AS]['router'][peer].get("Loopback0", "")
-                #         if peer_loopback:
-                #             peer_ip = peer_loopback.split('/')[0]
-                #             file.write(f" neighbor {peer_ip} remote-as {as_number}\n")
-                #             file.write(f" neighbor {peer_ip} update-source Loopback0\n")
-                #             file.write(f" neighbor {peer_ip} next-hop-self\n")
-
-                #             neighbors.append(peer_ip)
+ 
