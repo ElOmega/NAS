@@ -28,11 +28,11 @@ def read_json(file_path):
 def create_cfg_config(base_server_config, router, intent, AS,liste_extreme_AS_mid):
     global nombre_router_AS
 
-    with open(f'i{router[-1]}_startup-config.cfg', 'w') as file:
-        number=router[-1]
+    with open(f'i{router[1:]}_startup-config.cfg', 'w') as file:
+        number=router[1:]
         for sentence in base_server_config:
             file.write(sentence + '\n!\n')
-            if sentence == "boot-end-marker" and 'externe' in intent[AS]['router'][router]:
+            if sentence == "boot-end-marker" and 'externe' in intent[AS]['router'][router] and AS == "AS_mid":
                 liste_router_voisin = list(intent[AS]['router'][router]['externe'])
                 for i in range(1,len(liste_router_voisin)+1):
                     file.write(f"vrf definition Client_{i}\n")
@@ -74,7 +74,7 @@ def create_cfg_config(base_server_config, router, intent, AS,liste_extreme_AS_mi
                                 if router_other == router or router not in intent[other_AS]['router'][router_other]:
                                     continue
                                 file.write(f"interface {intent[AS]['router'][router]['externe'][router_other]}\n")
-                                file.write(f" ip address {ipv4(intent[other_AS]['address'][0],str(2))} 255.255.255.252\n")
+                                file.write(f" ip address {ipv4(intent[other_AS]['address'][0],str(10))} 255.255.255.252\n")
                                 file.write(" ip ospf 1 area 0\n")
                                 file.write(" negotiation auto\n mpls ip\n")
                                 file.write("!\n")
@@ -87,10 +87,6 @@ def create_cfg_config(base_server_config, router, intent, AS,liste_extreme_AS_mi
                             file.write(" ip ospf 1 area 0\n")
                             file.write(" negotiation auto\n mpls ip\n")
                             file.write("!\n")
-
-
-
-
 
                 #CONFIGURATION OSPF
                 if AS == "AS_mid":
@@ -143,16 +139,8 @@ def create_cfg_config(base_server_config, router, intent, AS,liste_extreme_AS_mi
                             (list(intent[AS]['router'][router])[0])
                             
                             if list(intent[AS]['router'][router])[0] in list(intent[AS_other]['router']):
-                                file.write(f" neighbor {ipv4(intent[AS]['address'][0],str(2))} remote-as {intent[AS_other]['bgp']}\n")
+                                file.write(f" neighbor {ipv4(intent[AS]['address'][0],str(10))} remote-as {intent[AS_other]['bgp']}\n")
                     file.write("!\n")
-
-
-
-
-                            
-
-
-
 
 
 
