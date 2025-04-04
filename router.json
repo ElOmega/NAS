@@ -5,21 +5,22 @@
     "address" : ["192.168.1/30"],
     "address_loopback" : ["10.0.0/32"],
     "router" : {
-      "R1" : {"R2" : "GigabitEthernet 1/0","R5" : "GigabitEthernet 2/0","R6" : "GigabitEthernet 3/0","ebgp_neighbors": "R4"},
-      "R2" : {"R1" : "GigabitEthernet 1/0", "R3" : "GigabitEthernet 2/0"},
-      "R3" : {"R2" : "GigabitEthernet 2/0", "R4" : "GigabitEthernet 1/0"},
-      "R4" : {"R3" : "GigabitEthernet 1/0","R7":"GigabitEthernet 2/0","R8" : "GigabitEthernet 3/0","ebgp_neighbors": "R1"}
+      "R1" : {"interne" :{"R2" : "GigabitEthernet 1/0"},"externe" : {"R5" : "GigabitEthernet 2/0","R6" : "GigabitEthernet 3/0"},"ebgp_neighbors": "R4"},
+      "R2" : {"interne":{"R1" : "GigabitEthernet 1/0", "R3" : "GigabitEthernet 2/0"}},
+      "R3" : {"interne":{"R2" : "GigabitEthernet 1/0", "R4" : "GigabitEthernet 2/0"}},
+      "R4" : {"interne" : {"R3" : "GigabitEthernet 1/0"},"externe" : {"R7":"GigabitEthernet 2/0","R8" : "GigabitEthernet 3/0"},"ebgp_neighbors": "R1"}
     },
     "protocol" : "OSPF",
-    "AS_number" : 100
+    "AS_number" : 100,
+    "bgp" : "6500"
   },
   "AS_haut_gauche" : {
     "address" : ["192.168.2/30"],
     "router" : {
       "R5" : {"R1" : "GigabitEthernet 1/0"}
     },
-    "protocol" : "OSPF",
-    "AS_number" : 100
+    "AS_number" : 200,
+    "bgp" : "6501"
 
   },
   "AS_bas_gauche" : {
@@ -27,8 +28,8 @@
     "router" : {
       "R6" : {"R1" : "GigabitEthernet 1/0"}
     },
-    "protocol" : "OSPF",
-    "AS_number" : 100
+    "AS_number" : 300,
+    "bgp" : "6502"
 
   },
   "AS_haut_droit" : {
@@ -36,8 +37,8 @@
     "router" : {
       "R7" : {"R4" : "GigabitEthernet 1/0"}
     },
-    "protocol" : "OSPF",
-    "AS_number" : 100
+    "AS_number" : 400,
+    "bgp" : "6503"
 
   },
   "AS_bas_droit" : {
@@ -45,8 +46,8 @@
     "router" : {
       "R8" : {"R4" : "GigabitEthernet 1/0"}
     },
-    "protocol" : "OSPF",
-    "AS_number" : 100
+    "AS_number" : 500,
+    "bgp" : "6504"
 
   }
 }
