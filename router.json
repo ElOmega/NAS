@@ -6,8 +6,8 @@
     "address_loopback" : ["10.0.0/32"],
     "router" : {
       "R1" : {"interne" :{"R2" : "GigabitEthernet 1/0"},"externe" : {"R5" : "GigabitEthernet 2/0","R6" : "GigabitEthernet 3/0"},"ebgp_neighbors": "R4"},
-      "R2" : {"interne":{"R1" : "GigabitEthernet 1/0", "R3" : "GigabitEthernet 2/0"}},
-      "R3" : {"interne":{"R2" : "GigabitEthernet 1/0", "R4" : "GigabitEthernet 2/0"}},
+      "R2" : {"interne":{"R1" : "GigabitEthernet 1/0", "R3" : "GigabitEthernet 2/0"},"externe" :{}},
+      "R3" : {"interne":{"R2" : "GigabitEthernet 1/0", "R4" : "GigabitEthernet 2/0"},"externe" :{}},
       "R4" : {"interne" : {"R3" : "GigabitEthernet 1/0"},"externe" : {"R7":"GigabitEthernet 2/0","R8" : "GigabitEthernet 3/0"},"ebgp_neighbors": "R1"}
     },
     "protocol" : "OSPF",
@@ -18,8 +18,8 @@
     "address" : ["192.168.2/30"],
     "router" : {
       "R5" : {"interne" :{"R51" : "GigabitEthernet 2/0","R52":"GigabitEthernet 3/0"},"externe" : {"R1" : "GigabitEthernet 1/0"}},
-      "R51" : {"interne" :{"R5" : "GigabitEthernet 1/0"}},
-      "R52" : {"interne":{"R5" : "GigabitEthernet 1/0"}}
+      "R51" : {"interne" :{"R5" : "GigabitEthernet 1/0"},"externe" :{}},
+      "R52" : {"interne":{"R5" : "GigabitEthernet 1/0"},"externe" :{}}
     },
     "AS_number" : 200,
     "bgp" : "6501"
@@ -28,7 +28,7 @@
   "AS_bas_gauche" : {
     "address" : ["192.168.3/30"],
     "router" : {
-      "R6" : {"R1" : "GigabitEthernet 1/0"}
+      "R6" : {"externe" : {"R1" : "GigabitEthernet 1/0"}}
     },
     "AS_number" : 300,
     "bgp" : "6502"
@@ -37,7 +37,7 @@
   "AS_haut_droit" : {
     "address" : ["192.168.4/30"],
     "router" : {
-      "R7" : {"R4" : "GigabitEthernet 1/0"}
+      "R7" : {"externe" : {"R4" : "GigabitEthernet 1/0"}}
     },
     "AS_number" : 400,
     "bgp" : "6503"
@@ -46,7 +46,7 @@
   "AS_bas_droit" : {
     "address" : ["192.168.5/30"],
     "router" : {
-      "R8" : {"R4" : "GigabitEthernet 1/0"}
+      "R8" : {"externe" : {"R4" : "GigabitEthernet 1/0"}}
     },
     "AS_number" : 500,
     "bgp" : "6504"
