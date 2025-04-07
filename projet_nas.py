@@ -1,4 +1,30 @@
 import json
+import telnetlib
+import time
+
+def send_config_to_router(host, port, config_file):
+    tn = telnetlib.Telnet(host, port)
+    
+    tn.read_until(b">")
+    tn.write(b"enable\n")
+    tn.read_until(b"#")
+    tn.write(b"terminal length 0\n")
+    tn.write(b"conf t\n")
+
+    with open(config_file, 'r') as file:
+        for line in file:
+            tn.write(line.strip().encode('ascii') + b"\n")
+            time.sleep(0.1)  # laisse le temps au routeur d'encaisser
+
+    tn.write(b"end\n")
+    tn.write(b"write memory\n")
+    tn.write(b"exit\n")
+
+    print(tn.read_all().decode('ascii'))
+
+# Exemple d’appel
+send_config_to_router("127.0.0.1", 5000, "i1_startup-config.cfg")
+
 
 nombre_router_AS=0
 
@@ -28,6 +54,7 @@ def read_json(file_path):
 def create_cfg_config(base_server_config, router, intent, AS,liste_extreme_AS_mid):
     global nombre_router_AS
 
+    fichier = f'i{router[1:]}_startup-config.cfg'
     with open(f'i{router[1:]}_startup-config.cfg', 'w') as file:
         number=router[1:]
         for sentence in base_server_config:
@@ -141,6 +168,8 @@ def create_cfg_config(base_server_config, router, intent, AS,liste_extreme_AS_mi
                             if list(intent[AS]['router'][router])[0] in list(intent[AS_other]['router']):
                                 file.write(f" neighbor {ipv4(intent[AS]['address'][0],str(10))} remote-as {intent[AS_other]['bgp']}\n")
                     file.write("!\n")
+    
+    send_config_to_router("127.0.0.1", 5000, fichier)
 
 
 
