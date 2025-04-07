@@ -17,7 +17,9 @@
   "AS_haut_gauche" : {
     "address" : ["192.168.2/30"],
     "router" : {
-      "R5" : {"R1" : "GigabitEthernet 1/0"}
+      "R5" : {"interne" :{"R51" : "GigabitEthernet 2/0","R52":"GigabitEthernet 3/0"},"externe" : {"R1" : "GigabitEthernet 1/0"}},
+      "R51" : {"interne" :{"R5" : "GigabitEthernet 1/0"}},
+      "R52" : {"interne":{"R5" : "GigabitEthernet 1/0"}}
     },
     "AS_number" : 200,
     "bgp" : "6501"

@@ -1,4 +1,30 @@
 import json
+import telnetlib
+import time
+
+def send_config_to_router(host, port, config_file):
+    tn = telnetlib.Telnet(host, port)
+    
+    tn.read_until(b">")
+    tn.write(b"enable\n")
+    tn.read_until(b"#")
+    tn.write(b"terminal length 0\n")
+    tn.write(b"conf t\n")
+
+    with open(config_file, 'r') as file:
+        for line in file:
+            tn.write(line.strip().encode('ascii') + b"\n")
+            time.sleep(0.1)  # laisse le temps au routeur d'encaisser
+
+    tn.write(b"end\n")
+    tn.write(b"write memory\n")
+    tn.write(b"exit\n")
+
+    print(tn.read_all().decode('ascii'))
+
+# Exemple d’appel
+send_config_to_router("127.0.0.1", 5000, "i1_startup-config.cfg")
+
 
 nombre_router_AS=0
 
@@ -25,21 +51,22 @@ def read_json(file_path):
         print(f"Error: Invalid JSON in file {file_path}.")
         return None
 
-def create_cfg_config(base_server_config, router, intent, AS):
+def create_cfg_config(base_server_config, router, intent, AS,liste_extreme_AS_mid):
     global nombre_router_AS
 
-    with open(f'i{router[-1]}_startup-config.cfg', 'w') as file:
-        number=router[-1]
+    fichier = f'i{router[1:]}_startup-config.cfg'
+    with open(f'i{router[1:]}_startup-config.cfg', 'w') as file:
+        number=router[1:]
         for sentence in base_server_config:
             file.write(sentence + '\n!\n')
-            if sentence == "boot-end-marker" and 'externe' in intent[AS]['router'][router]:
+            if sentence == "boot-end-marker" and 'externe' in intent[AS]['router'][router] and AS == "AS_mid":
                 liste_router_voisin = list(intent[AS]['router'][router]['externe'])
                 for i in range(1,len(liste_router_voisin)+1):
                     file.write(f"vrf definition Client_{i}\n")
                     file.write(f" rd 100:{i}\n")
                     file.write(f" route-target import 100:{i}000\n")
                     file.write(f" route-target export 100:{i}000\n") 
-                    file.write(f"!\n")                           
+                    file.write(f" !\n")                           
                     file.write(f" address-family ipv4\n")
                     file.write(f" exit-address-family\n")
                     file.write("!\n")
@@ -61,7 +88,7 @@ def create_cfg_config(base_server_config, router, intent, AS):
                     elif position == "interne":
                         for router_other in intent[AS]['router'][router][position]: 
                             file.write(f"interface {intent[AS]['router'][router][position][router_other]}\n" 
-                               f" ip address {ipv4(intent[AS]['address'][0],str(nombre_router_AS))}255.255.255.252\n")
+                               f" ip address {ipv4(intent[AS]['address'][0],str(nombre_router_AS))} 255.255.255.252\n")
                             file.write(" ip ospf 1 area 0\n")
                             file.write(" negotiation auto\n mpls ip\n")
                             file.write("!\n")
@@ -74,7 +101,7 @@ def create_cfg_config(base_server_config, router, intent, AS):
                                 if router_other == router or router not in intent[other_AS]['router'][router_other]:
                                     continue
                                 file.write(f"interface {intent[AS]['router'][router]['externe'][router_other]}\n")
-                                file.write(f" ip address {ipv4(intent[other_AS]['address'][0],str(2))} 255.255.255.252\n")
+                                file.write(f" ip address {ipv4(intent[other_AS]['address'][0],str(10))} 255.255.255.252\n")
                                 file.write(" ip ospf 1 area 0\n")
                                 file.write(" negotiation auto\n mpls ip\n")
                                 file.write("!\n")
@@ -88,33 +115,31 @@ def create_cfg_config(base_server_config, router, intent, AS):
                             file.write(" negotiation auto\n mpls ip\n")
                             file.write("!\n")
 
-
-
-
-
                 #CONFIGURATION OSPF
                 if AS == "AS_mid":
                     file.write("router ospf 1\n")
                     file.write(f" router-id {str(number)+'.'+str(number)+'.'+str(number)+'.'+str(number)}\n")
                     file.write(" mpls ldp autoconfig\n")
                     file.write("!\n")
-                
+                 
                 #Configuration de bgp
-                if "interne" in intent[AS]['router'][router] : 
+                if router == "R1" or router == "R4": 
                     neighbor_AS = list(intent[AS]['router'])
                     file.write(f"router bgp {intent[AS]['bgp']}\n")
                     file.write(f" bgp log-neighbor-changes\n")
                     for neighbor in intent[AS]['router'][router]['interne']:
                         adresse_loopback = loopback(intent[AS]['address_loopback'],neighbor[-1])
-
+                        file.write(" redistribute connected\n")
                         file.write(f" neighbor {adresse_loopback} remote-as {intent[AS]['bgp']}\n")
-                        file.write(f" neighbor {adresse_loopback} update-source Loopback0\n")
                     file.write("!\n")
                     file.write(f"address-family vpnv4\n")
-                    for neighbor in intent[AS]['router'][router]['interne']:
+                    for neighbor in liste_extreme_AS_mid:
+                        if router == neighbor:
+                            continue
                         adresse_loopback = loopback(intent[AS]['address_loopback'],neighbor[-1])
                         file.write(f" neighbor {adresse_loopback} activate\n")
                         file.write(f" neighbor {adresse_loopback} send-community both\n")
+                        file.write(f" neighbor {adresse_loopback} next-hop-self\n")
                     file.write(f"exit-address-family\n")
                     file.write("!\n")
 
@@ -126,8 +151,9 @@ def create_cfg_config(base_server_config, router, intent, AS):
                                     continue
                                 if router_other in intent[other_AS]['router']:
                                     file.write(f"address-family ipv4 vrf Client_{i}\n")
+                                    file.write(f"neighbor {ipv4(intent[other_AS]['address'][0],str(1))} remote-as {intent[other_AS]['bgp']}\n")
                                     file.write(f" neighbor {ipv4(intent[other_AS]['address'][0],str(1))} activate\n")
-                                    file.write(f" neighbor {ipv4(intent[other_AS]['address'][0],str(1))} send-community both\n")
+                                    file.write(" exit-address-family\n")
                                     i+=1
                                     file.write("!\n")
                 
@@ -137,22 +163,13 @@ def create_cfg_config(base_server_config, router, intent, AS):
                     file.write(" bgp log-neighbor-changes\n")
                     file.write(" redistribute connected\n")
                     for AS_other in intent :
-                            print(list(intent[AS]['router'][router])[0])
-                            print('et')
-                            print(list(intent[AS_other]['router']))
-                            print('------------')
-                            if list(intent[AS]['router'][router])[0] in list(intent[AS_other]['router']):
-                                print('ici')
-                                file.write(f" neighbor {ipv4(intent[AS]['address'][0],str(1))} remote-as {intent[AS_other]['bgp']}\n")
-                    file.write("!\n")
-
-
-
-
+                            (list(intent[AS]['router'][router])[0])
                             
-
-
-
+                            if list(intent[AS]['router'][router])[0] in list(intent[AS_other]['router']):
+                                file.write(f" neighbor {ipv4(intent[AS]['address'][0],str(10))} remote-as {intent[AS_other]['bgp']}\n")
+                    file.write("!\n")
+    
+    send_config_to_router("127.0.0.1", 5000, fichier)
 
 
 
@@ -160,11 +177,11 @@ def create_cfg_config(base_server_config, router, intent, AS):
 
 def main(intent, base_server_config):
     global nombre_router_AS
+    liste_extreme_AS_mid = ["R1","R4"]
     for AS in intent:
         nombre_router_AS = 1
-
         for router in intent[AS]["router"]:
-            create_cfg_config(base_server_config, router, intent, AS)
+            create_cfg_config(base_server_config, router, intent, AS,liste_extreme_AS_mid)
 
 if __name__ == "__main__":
     base_server_config = [
