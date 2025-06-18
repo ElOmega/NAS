@@ -1,29 +1,30 @@
 import json
 #import telnetlib
 import time
+import telnetlib
+ 
+def send_config_via_telnet(host, port, config_lines):
+    try:
+        tn = telnetlib.Telnet(host, port, timeout=10)
+        tn.write(b"\n")  # wake up terminal
+        time.sleep(1)
+        tn.write(b"enable\n")
+        tn.write(b"configure terminal\n")
+        time.sleep(1)
 
-#def send_config_to_router(host, port, config_file):
-#    tn = telnetlib.Telnet(host, port)    
-#    tn.read_until(b">")
-#    tn.write(b"enable\n")
-#   tn.read_until(b"#")
-#    tn.write(b"terminal length 0\n")
-#   tn.write(b"conf t\n")
-#
- #   with open(config_file, 'r') as file:
-  #      for line in file:
-   #         tn.write(line.strip().encode('ascii') + b"\n")
-    #        time.sleep(0.1)  # laisse le temps au routeur d'encaisser
+        for line in config_lines:
+            tn.write(line.encode('ascii') + b"\n")
+            time.sleep(0.1)
 
-    #tn.write(b"end\n")
-    #tn.write(b"write memory\n")
-    #tn.write(b"exit\n")
+        tn.write(b"end\n")
+        tn.write(b"write memory\n")
+        time.sleep(1)
 
-    #print(tn.read_all().decode('ascii'))
-
-# Exemple d’appel
-#send_config_to_router("127.0.0.1", 5000, "i1_startup-config.cfg")
-
+        output = tn.read_very_eager().decode('ascii')
+        tn.close()
+        return output
+    except Exception as e:
+        return f"Erreur Telnet : {e}"
 
 nombre_router_AS=0
 
@@ -244,9 +245,38 @@ if __name__ == "__main__":
         "end"
     ]
 
+    
+
+    router_ports = {
+        "R1": 5000,
+        "R2": 5001,
+        "R3": 5002,
+        "R4": 5003,
+        "R5": 5004,
+        "R6": 5005,
+        "R7": 5006,
+        "R8": 5007
+    }
+
+    # Charger le JSON
     intent = read_json("router.json")
     if intent:
         main(intent, base_server_config)
+
+    # Envoyer la config à chaque routeur
+    for as_name, as_info in intent.items():
+        for router in as_info['router']:
+            if router in router_ports:
+                cfg_filename = f"i{router[1:]}_startup-config.cfg"
+                try:
+                    with open(cfg_filename, "r") as f:
+                        config_str = f.read()
+                    config_lines = config_str.split('\n')
+                    print(f"=== Envoi de la config à {router} ===")
+                    result = send_config_via_telnet("127.0.0.1", router_ports[router], config_lines)
+                    print(result)
+                except FileNotFoundError:
+                    print(f"Config file {cfg_filename} not found for {router}")
 
 
  
