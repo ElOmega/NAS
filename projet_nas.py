@@ -1,4 +1,6 @@
 import json
+import os
+import shutil
 #import telnetlib
 import time
 
@@ -201,7 +203,26 @@ def create_cfg_config(base_server_config, router, intent, AS,liste_extreme_AS_mi
 
 
 
+def deploy_to_gns3(router_name, AS, project_path):
+    # Ex: router_name = 'R1' => fichier = i1_startup-config.cfg
+    router_index = router_name[1:]
+    cfg_file = f"i{router_index}_startup-config.cfg"
+    
+    # Correspondance dossier GNS3 (ex: R1-0)
+    gns3_router_folder = intent[AS]['router'][router_name].get('file', {})
 
+    # Dossier config dans le projet GNS3
+    target_path = os.path.join(project_path, "project-files", "dynamips", gns3_router_folder, "configs")
+    
+    # Crée le dossier s’il n'existe pas
+    os.makedirs(target_path, exist_ok=True)
+    
+    # Chemin complet du fichier destination
+    dest_file = os.path.join(target_path, f"i{router_index}_startup-config.cfg")
+
+    # Copie le fichier généré dans le dossier de GNS3
+    shutil.copy(cfg_file, dest_file)
+    print(f"{cfg_file} copié vers {dest_file}")
 
 def main(intent, base_server_config):
     global nombre_router_AS
@@ -210,6 +231,7 @@ def main(intent, base_server_config):
         nombre_router_AS = 1
         for router in intent[AS]["router"]:
             create_cfg_config(base_server_config, router, intent, AS,liste_extreme_AS_mid)
+            deploy_to_gns3(router, AS, os.path.dirname(os.path.abspath(__file__)))
 
 if __name__ == "__main__":
     base_server_config = [
