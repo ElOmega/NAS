@@ -5,10 +5,10 @@
     "address" : ["192.168.1/30"],
     "address_loopback" : ["10.0.0/32"],
     "router" : {
-      "R1" : {"interne" :{"R2" : "GigabitEthernet 1/0"},"externe" : {"R5" : "GigabitEthernet 2/0","R6" : "FastEthernet 0/0"},"ebgp_neighbors": "R4"},
-      "R2" : {"interne":{"R1" : "GigabitEthernet 1/0", "R3" : "GigabitEthernet 2/0"},"externe" :{}},
-      "R3" : {"interne":{"R2" : "GigabitEthernet 1/0", "R4" : "GigabitEthernet 2/0"},"externe" :{}},
-      "R4" : {"interne" : {"R3" : "GigabitEthernet 1/0"},"externe" : {"R7":"GigabitEthernet 2/0","R8" : "FastEthernet 0/0"},"ebgp_neighbors": "R1"}
+      "R1" : {"interne" :{"R2" : "GigabitEthernet 1/0"},"externe" : {"R5" : "GigabitEthernet 2/0","R6" : "FastEthernet 0/0"},"ebgp_neighbors": "R4", "file" : "92379bba-8083-4a27-9e7c-d829996e6e53"},
+      "R2" : {"interne":{"R1" : "GigabitEthernet 1/0", "R3" : "GigabitEthernet 2/0"},"externe" :{}, "file" : "d6cc6f1c-ab3d-43be-81d9-64a6618f122b"},
+      "R3" : {"interne":{"R2" : "GigabitEthernet 1/0", "R4" : "GigabitEthernet 2/0"},"externe" :{}, "file" : "6d762b15-0676-4c02-a199-a2be6c863bdb"},
+      "R4" : {"interne" : {"R3" : "GigabitEthernet 1/0"},"externe" : {"R7":"GigabitEthernet 2/0","R8" : "FastEthernet 0/0"},"ebgp_neighbors": "R1", "file" : "b40c2a9b-ed87-4731-a296-2bea95ceee62"}
     },
     "protocol" : "OSPF",
     "AS_number" : 100,
@@ -18,7 +18,7 @@
     "address" : ["192.168.2/30"],
     "address_loopback" : ["10.0.0/32"],
     "router" : {
-      "R5" : {"externe" : {"R1" : "FastEthernet 0/0"}}
+      "R5" : {"interne" : {},"externe" : {"R1" : "FastEthernet 0/0"}, "file" : "d99b96ed-7db0-4725-b495-8ff3abfe5d5c"}
     },
     "AS_number" : 200,
     "bgp" : "6501"
@@ -29,7 +29,7 @@
     "address_loopback" : ["10.0.0/32"],
 
     "router" : {
-      "R6" : {"externe" : {"R1" : "FastEthernet 0/0"}}
+      "R6" : {"externe" : {"R1" : "FastEthernet 0/0"}, "file" : "c05bedb0-cf39-4747-b562-c4cbbef8fc3e"}
     },
     "AS_number" : 300,
     "bgp" : "6502"
@@ -40,7 +40,7 @@
     "address_loopback" : ["10.0.0/32"],
 
     "router" : {
-      "R7" : {"externe" : {"R4" : "FastEthernet 0/0"}}
+      "R7" : {"externe" : {"R4" : "FastEthernet 0/0"}, "file" : "8cd5de22-a1ea-41b8-b6e9-96a81115ec47"}
     },
     "AS_number" : 400,
     "bgp" : "6503"
@@ -50,8 +50,8 @@
     "address" : ["192.168.5/30"],
     "address_loopback" : ["10.0.0/32"],
 
-    "router" : {
-      "R8" : {"externe" : {"R4" : "FastEthernet 0/0"}}
+    "router" : { 
+      "R8" : {"externe" : {"R4" : "FastEthernet 0/0"}, "file" : "ed8fb78f-5993-45ef-b5e6-b1894a80a8ed"}
     },
     "AS_number" : 500,
     "bgp" : "6504"
